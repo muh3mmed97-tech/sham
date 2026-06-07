@@ -24,7 +24,8 @@
         <tr>
             <td>
                 @if($product->image)
-                    <img src="{{ asset('storage/' . $product->image) }}" width="50">
+                    {{-- التعديل هنا: نستخدم asset مع المسار المخزن --}}
+                    <img src="{{ asset('storage/' . $product->image) }}" width="50" alt="صورة المنتج">
                 @else
                     لا توجد صورة
                 @endif

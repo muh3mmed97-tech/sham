@@ -2,45 +2,33 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasOne; // تأكد من إضافة هذا السطر
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+// استيراد الموديلات اللازمة
+use App\Models\Store; 
+use App\Models\Wallet;
+use App\Models\Wishlist;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
-        'role', // أضفنا هذا الحقل مسبقاً
+        'role',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -49,9 +37,32 @@ class User extends Authenticatable
         ];
     }
 
-    // علاقة المستخدم بمتجره (التاجر لديه متجر واحد)
+    // منطق إنشاء المحفظة تلقائياً عند إنشاء المستخدم
+    protected static function booted()
+    {
+        static::created(function ($user) {
+            $user->wallet()->create([
+                'balance' => 0.00,
+                'currency' => 'USD',
+            ]);
+        });
+    }
+
+    // علاقة المستخدم بمتجره
     public function store(): HasOne
     {
         return $this->hasOne(Store::class);
+    }
+
+    // علاقة المستخدم بمحفظته
+    public function wallet(): HasOne
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    // علاقة المستخدم بقائمة المفضلة (التي قمنا بإضافتها)
+    public function wishlist(): HasMany
+    {
+        return $this->hasMany(Wishlist::class);
     }
 }

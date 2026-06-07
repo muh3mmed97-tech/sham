@@ -4,10 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
-    // أضفنا 'description' و 'image' إلى هذه القائمة
     protected $fillable = [
         'store_id', 
         'category_id', 
@@ -26,5 +26,17 @@ class Product extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    // علاقة التقييمات
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    // علاقة الأسئلة: المنتج الواحد له عدة أسئلة
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class);
     }
 }
