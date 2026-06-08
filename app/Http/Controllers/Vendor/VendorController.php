@@ -15,13 +15,17 @@ class VendorController extends Controller
 {
     public function index()
     {
-        return view('vendor.dashboard');
+        $user = auth()->user();
+        $products = $user->store ? $user->store->products()->with('questions')->latest()->get() : collect();
+        $orders = Order::where('vendor_id', $user->id)->latest()->take(5)->get();
+        $wallet = Wallet::firstOrCreate(['user_id' => $user->id]);
+
+        return view('vendor.dashboard', compact('products', 'orders', 'wallet'));
     }
 
     public function products()
     {
-        $products = auth()->user()->store->products; 
-        return view('vendor.products.index', compact('products'));
+        return redirect()->route('vendor.dashboard');
     }
 
     public function orders()
@@ -30,17 +34,17 @@ class VendorController extends Controller
         return view('vendor.orders', compact('orders'));
     }
 
-    public function updateOrder(Request $request, $id)
+    // الدالة الجديدة لتحديث الحالة (تم الربط مع الـ Route الجديد)
+    public function updateStatus(Request $request, $id)
     {
         $order = Order::where('vendor_id', Auth::id())->findOrFail($id);
 
-        // المنطق الجديد: عند تحويل الطلب من 'pending' إلى أي حالة أخرى لأول مرة، يتم تحويل المال للتاجر
+        // المنطق المالي الذكي (إيداع/استرجاع)
         if ($order->status == 'pending' && in_array($request->status, ['processing', 'shipped', 'delivered'])) {
             $vendorWallet = Wallet::firstOrCreate(['user_id' => $order->vendor_id]);
             $vendorWallet->balance += $order->total_price;
             $vendorWallet->save();
         } 
-        // إذا تم إلغاء الطلب بعد أن كان قد تم قبوله (إرجاع المال للعميل)
         elseif ($order->status != 'pending' && $order->status != 'cancelled' && $request->status == 'cancelled') {
             $customerWallet = Wallet::where('user_id', $order->customer_id)->first();
             if ($customerWallet) {
@@ -49,11 +53,16 @@ class VendorController extends Controller
             }
         }
 
-        // تحديث الحالة
         $order->status = $request->status;
         $order->save();
 
         return back()->with('success', 'تم تحديث حالة الطلب إلى: ' . $request->status);
+    }
+
+    // الاحتفاظ بالدالة القديمة للعمليات الأخرى إذا احتجتها
+    public function updateOrder(Request $request, $id)
+    {
+        return $this->updateStatus($request, $id);
     }
 
     public function createProduct()
@@ -68,7 +77,7 @@ class VendorController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric',
-            'stock' => 'required|integer',
+            'stock' => 'required|integer', 
             'category_id' => 'required|exists:categories,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
@@ -78,7 +87,7 @@ class VendorController extends Controller
         }
 
         auth()->user()->store->products()->create($data);
-        return redirect()->route('vendor.products')->with('success', 'تم إضافة المنتج بنجاح!');
+        return redirect()->route('vendor.dashboard')->with('success', 'تم إضافة المنتج بنجاح!');
     }
 
     public function editProduct($id)
@@ -107,7 +116,7 @@ class VendorController extends Controller
         }
 
         $product->update($data);
-        return redirect()->route('vendor.products')->with('success', 'تم تحديث المنتج!');
+        return redirect()->route('vendor.dashboard')->with('success', 'تم تحديث المنتج!');
     }
 
     public function destroyProduct($id)
@@ -115,6 +124,6 @@ class VendorController extends Controller
         $product = auth()->user()->store->products()->findOrFail($id);
         if ($product->image) Storage::disk('public')->delete($product->image);
         $product->delete();
-        return redirect()->route('vendor.products')->with('success', 'تم حذف المنتج!');
+        return redirect()->route('vendor.dashboard')->with('success', 'تم حذف المنتج!');
     }
 }

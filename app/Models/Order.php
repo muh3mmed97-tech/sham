@@ -12,8 +12,9 @@ class Order extends Model
     protected $fillable = [
         'vendor_id',
         'customer_id',
-        'product_id', // أضفنا هذا الحقل
+        'product_id',
         'product_name',
+        'price',         // <--- أضفنا هذا السطر المهم جداً
         'quantity',
         'total_price',
         'status',
@@ -29,7 +30,6 @@ class Order extends Model
         return $this->belongsTo(User::class, 'customer_id');
     }
 
-    // إضافة العلاقة مع المنتج
     public function product()
     {
         return $this->belongsTo(Product::class, 'product_id');

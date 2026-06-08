@@ -95,6 +95,13 @@
                         <div style="margin-right: 20px; background: #e3f2fd; padding: 10px; border-radius: 8px; border-right: 3px solid #005a9c;">
                             <p style="margin: 0; color: #005a9c;"><strong>رد التاجر:</strong> {{ $question->answer }}</p>
                         </div>
+                    {{-- عرض نموذج الرد للتاجر صاحب المتجر فقط --}}
+                    @elseif(auth()->check() && auth()->user()->role == 'vendor' && $product->store->user_id == auth()->id())
+                        <form action="{{ route('questions.answer', $question->id) }}" method="POST" style="margin-right: 20px; margin-top: 10px;">
+                            @csrf
+                            <textarea name="answer" rows="2" style="width: 100%; border: 1px solid #ccc; border-radius: 5px; padding: 5px;" placeholder="اكتب ردك هنا..." required></textarea>
+                            <button type="submit" style="margin-top: 5px; background: #005a9c; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">إرسال الرد</button>
+                        </form>
                     @else
                         <p style="font-size: 0.85rem; color: #999; margin-right: 20px;">(بانتظار رد التاجر...)</p>
                     @endif
@@ -105,14 +112,16 @@
         </div>
 
         @auth
-            <form action="{{ route('questions.store', $product->id) }}" method="POST" style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-                @csrf
-                <label style="display: block; margin-bottom: 10px; font-weight: bold;">اطرح سؤالاً:</label>
-                <textarea name="content" rows="3" style="width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px;" required></textarea>
-                <button type="submit" style="margin-top: 10px; background: #005a9c; color: white; padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer;">إرسال</button>
-            </form>
+            @if(auth()->user()->role == 'customer')
+                <form action="{{ route('questions.store', $product->id) }}" method="POST" style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                    @csrf
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">اطرح سؤالاً:</label>
+                    <textarea name="content" rows="3" style="width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px;" required></textarea>
+                    <button type="submit" style="margin-top: 10px; background: #005a9c; color: white; padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer;">إرسال</button>
+                </form>
+            @endif
         @else
-            <p style="text-align: center; background: #fff3e0; padding: 10px; border-radius: 8px;">يجب <a href="/login-as-customer" style="color: #e65100; font-weight: bold;">تسجيل الدخول</a> لطرح الأسئلة.</p>
+            <p style="text-align: center; background: #fff3e0; padding: 10px; border-radius: 8px;">يجب <a href="/login-as-customer" style="color: #e65100; font-weight: bold;">تسجيل الدخول كعميل</a> لطرح الأسئلة.</p>
         @endauth
     </div>
 </div>

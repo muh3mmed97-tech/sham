@@ -8,6 +8,8 @@ use App\Models\Wallet;
 use App\Models\Order; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail; // تأكد من وجود هذا السطر
 
 class CartController extends Controller
 {
@@ -74,26 +76,40 @@ class CartController extends Controller
         $wallet = $user->wallet;
 
         if ($wallet && $wallet->balance >= $total) {
-            $wallet->balance -= $total;
-            $wallet->save();
+            
+            return DB::transaction(function () use ($user, $cartItems, $total, $wallet) {
+                $wallet->balance -= $total;
+                $wallet->save();
 
-            foreach ($cartItems as $item) {
-                $vendor = $item->product->store->user;
-                
-                Order::create([
-                    'vendor_id' => $vendor->id,
-                    'customer_id' => $user->id,
-                    'product_id' => $item->product_id, // تم إضافة معرف المنتج هنا
-                    'product_name' => $item->product->name,
-                    'quantity' => $item->quantity,
-                    'total_price' => $item->product->price * $item->quantity,
-                    'status' => 'pending'
-                ]);
-            }
+                $lastOrder = null;
 
-            Cart::where('user_id', $user->id)->delete();
+                foreach ($cartItems as $item) {
+                    $vendor = $item->product->store->user;
+                    
+                    $lastOrder = Order::create([
+                        'vendor_id' => $vendor->id,
+                        'customer_id' => $user->id,
+                        'product_id' => $item->product_id,
+                        'product_name' => $item->product->name,
+                        'price' => $item->product->price,
+                        'quantity' => $item->quantity,
+                        'total_price' => $item->product->price * $item->quantity,
+                        'status' => 'pending'
+                    ]);
+                }
 
-            return redirect()->route('cart.index')->with('success', 'تم إرسال الطلب بنجاح! بانتظار موافقة التاجر.');
+                Cart::where('user_id', $user->id)->delete();
+
+                // إرسال الفاتورة عبر البريد الإلكتروني
+                Mail::send('emails.invoice', ['order' => $lastOrder], function($message) use ($user, $lastOrder) {
+                    $message->to($user->email)
+                            ->subject('فاتورة طلبك من منصة شام #' . $lastOrder->id);
+                });
+
+                // التوجيه إلى الفاتورة
+                return redirect()->route('customer.invoice', $lastOrder->id)
+                                 ->with('success', 'تمت عملية الشراء بنجاح وتم إرسال نسخة لبريدك!');
+            });
         }
 
         return back()->with('error', 'رصيدك غير كافٍ لإتمام عملية الشراء.');

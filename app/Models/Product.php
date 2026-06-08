@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
+    // هنا نضع فقط الأعمدة الموجودة فعلياً في جدول products
     protected $fillable = [
         'store_id', 
         'category_id', 
         'name', 
         'description', 
         'price', 
-        'stock', 
+        'stock', // تم اعتماد stock كاسم نهائي ومعتمد
         'image'
     ];
 
@@ -28,13 +29,11 @@ class Product extends Model
         return $this->belongsTo(Category::class);
     }
 
-    // علاقة التقييمات
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
     }
 
-    // علاقة الأسئلة: المنتج الواحد له عدة أسئلة
     public function questions(): HasMany
     {
         return $this->hasMany(Question::class);

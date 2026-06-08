@@ -6,7 +6,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\QuestionController; // إضافة المتحكم الجديد
+use App\Http\Controllers\QuestionController;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Product; 
@@ -60,7 +60,7 @@ Route::middleware(['auth'])->group(function () {
     // مسار التقييمات
     Route::post('/reviews/{productId}', [ReviewController::class, 'store'])->name('reviews.store');
 
-    // مسارات الأسئلة والأجوبة (تمت إضافتها هنا)
+    // مسارات الأسئلة والأجوبة
     Route::post('/questions/{productId}', [QuestionController::class, 'store'])->name('questions.store');
     Route::post('/questions/{id}/answer', [QuestionController::class, 'answer'])->name('questions.answer');
 
@@ -69,6 +69,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [VendorController::class, 'index'])->name('vendor.dashboard');
         Route::get('/products', [VendorController::class, 'products'])->name('vendor.products');
         Route::get('/orders', [VendorController::class, 'orders'])->name('vendor.orders');
+        
+        // المسار الجديد لتحديث حالة الطلب
+        Route::put('/orders/{id}/update-status', [VendorController::class, 'updateStatus'])->name('vendor.orders.updateStatus');
+        
         Route::put('/orders/{id}', [VendorController::class, 'updateOrder'])->name('vendor.orders.update');
         Route::get('/products/create', [VendorController::class, 'createProduct'])->name('vendor.products.create');
         Route::post('/products', [VendorController::class, 'storeProduct'])->name('vendor.products.store');
@@ -81,6 +85,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('customer')->middleware('role:customer')->group(function () {
         Route::get('/dashboard', [CustomerController::class, 'index'])->name('customer.dashboard');
         Route::get('/orders', [CustomerController::class, 'orders'])->name('customer.orders'); 
+        Route::get('/invoice/{id}', [CustomerController::class, 'invoice'])->name('customer.invoice');
     });
 });
 
@@ -93,10 +98,12 @@ Route::get('/product/{id}', function ($id) {
 
 // 4. المسار العام
 Route::get('/{category?}', function (Request $request, $categoryId = null) {
-    $products = Product::query()
-        ->with('reviews') 
-        ->latest();
+    if (Auth::check()) {
+        if (Auth::user()->role == 'vendor') return redirect()->route('vendor.dashboard');
+        if (Auth::user()->role == 'customer') return redirect()->route('customer.dashboard');
+    }
 
+    $products = Product::query()->with('reviews')->latest();
     if ($categoryId) { $products->where('category_id', $categoryId); }
     if ($request->filled('search')) { $products->where('name', 'like', '%' . $request->search . '%'); }
     

@@ -18,7 +18,7 @@
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ $order->product_name }}</td>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ $order->quantity }}</td>
-                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ number_format($order->total_price, 2) }} $</td>
+                <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ number_format($order->total_price, 0) }} ل.س</td>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">
                     <span style="padding: 5px 10px; border-radius: 5px; 
                         {{ $order->status == 'pending' ? 'background:#fff3cd; color:#856404;' : '' }}
@@ -30,7 +30,7 @@
                     </span>
                 </td>
                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">
-                    <form action="{{ route('vendor.orders.update', $order->id) }}" method="POST">
+                    <form action="{{ route('vendor.orders.updateStatus', $order->id) }}" method="POST">
                         @csrf @method('PUT')
                         <select name="status" onchange="this.form.submit()" style="padding: 5px; border-radius: 5px; border: 1px solid #ccc; cursor: pointer;">
                             <option value="pending" {{ $order->status == 'pending' ? 'selected' : '' }}>بانتظار الموافقة</option>
