@@ -57,7 +57,9 @@
         <tbody>
             @foreach($withdrawals ?? [] as $w)
             <tr>
-                <td style="padding: 10px; border-bottom: 1px solid #eee;">{{ number_format($w->amount, 0) }} ل.س</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    {{ number_format($w->amount, 0) }} ل.س
+                </td>
                 <td style="padding: 10px; border-bottom: 1px solid #eee;">{{ $w->method ?? 'شحن رصيد' }}</td>
                 <td style="padding: 10px; border-bottom: 1px solid #eee;">{{ $w->created_at->format('Y-m-d H:i') }}</td>
                 <td style="padding: 10px; border-bottom: 1px solid #eee;">

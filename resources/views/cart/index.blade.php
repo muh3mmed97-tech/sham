@@ -24,15 +24,15 @@
                 @php $grandTotal += $item->product->price * $item->quantity; @endphp
                 <tr style="border-bottom: 1px solid #eee;">
                     <td style="padding: 15px;">{{ $item->product->name }}</td>
-                    <td style="padding: 15px;">{{ number_format($item->product->price, 2) }} $</td>
+                    <td style="padding: 15px;">{{ number_format($item->product->price, 0) }} ل.س</td>
                     <td style="padding: 15px;">
                         <form action="{{ route('cart.update', $item->id) }}" method="POST" style="display: flex; gap: 5px;">
                             @csrf @method('PATCH')
                             <input type="number" name="quantity" value="{{ $item->quantity }}" min="1" style="width: 50px; padding: 5px;">
-                            <button type="submit" style="padding: 5px 10px; cursor: pointer;">تحديث</button>
+                            <button type="submit" style="padding: 5px 10px; cursor: pointer; background: #005a9c; color: white; border: none; border-radius: 4px;">تحديث</button>
                         </form>
                     </td>
-                    <td style="padding: 15px;">{{ number_format($item->product->price * $item->quantity, 2) }} $</td>
+                    <td style="padding: 15px;">{{ number_format($item->product->price * $item->quantity, 0) }} ل.س</td>
                     <td style="padding: 15px;">
                         <form action="{{ route('cart.remove', $item->id) }}" method="POST">
                             @csrf @method('DELETE')
@@ -44,7 +44,7 @@
         </table>
 
         <div style="margin-top: 20px; text-align: left; background: white; padding: 20px; border-radius: 10px;">
-            <h3>الإجمالي الكلي: {{ number_format($grandTotal, 2) }} $</h3>
+            <h3 style="color: #333;">الإجمالي الكلي: {{ number_format($grandTotal, 0) }} ل.س</h3>
             <form action="{{ route('cart.checkout') }}" method="POST">
                 @csrf
                 <button type="submit" style="background: #2e7d32; color: white; padding: 15px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1rem;">إتمام عملية الشراء</button>
