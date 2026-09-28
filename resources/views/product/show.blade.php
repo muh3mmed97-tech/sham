@@ -1,128 +1,133 @@
 @extends('layouts.app')
 
 @section('content')
-<div style="max-width: 1100px; margin: 30px auto; padding: 0 20px;">
-
+<div style="max-width: 900px; margin: 40px auto; font-family: 'Cairo', sans-serif;" dir="rtl">
+    
+    <!-- زر العودة -->
     <div style="margin-bottom: 20px;">
-        <a href="{{ route('home') }}" style="text-decoration: none; color: #005a9c; font-weight: bold; display: flex; align-items: center; gap: 5px;">
-            <span style="font-size: 1.2rem;">←</span> العودة إلى الصفحة الرئيسية
-        </a>
+        <a href="{{ route('home') }}" style="color: #1E6FB8; text-decoration: none; font-weight: bold;">← العودة إلى الصفحة الرئيسية</a>
     </div>
 
-    <div style="display: flex; gap: 40px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); flex-wrap: wrap;">
+    <!-- صندوق تفاصيل المنتج -->
+    <div style="background: white; padding: 40px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border: 1px solid #E5E7EB; display: flex; gap: 40px; align-items: start; margin-bottom: 30px;">
         
-        <div style="flex: 1; min-width: 300px;">
+        <!-- صورة المنتج -->
+        <div style="flex: 1; text-align: center;">
             @if($product->image)
-                <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" 
-                     style="width: 100%; height: 400px; object-fit: cover; border-radius: 15px; border: 1px solid #eee;">
+                <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" style="max-width: 100%; height: auto; border-radius: 12px; border: 1px solid #E5E7EB;">
             @else
-                <div style="width: 100%; height: 400px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; border-radius: 15px;">
-                    <span style="color: #999;">لا توجد صورة</span>
+                <div style="background: #F6F8FB; height: 250px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #9CA3AF; border: 1px solid #E5E7EB;">
+                    صورة المنتج غير متوفرة
                 </div>
             @endif
         </div>
 
-        <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-                <h1 style="color: #333; margin-top: 0; font-size: 2rem;">{{ $product->name }}</h1>
-                
-                <div style="margin: 15px 0; color: #f39c12; font-size: 1.2rem;">
-                    @php $avgRating = $product->reviews->avg('rating'); @endphp
-                    @for($i = 1; $i <= 5; $i++)
-                        {{ $i <= $avgRating ? '★' : '☆' }}
-                    @endfor
-                    <span style="color: #777; font-size: 0.9rem; margin-right: 10px;">({{ $product->reviews->count() }} تقييم)</span>
-                </div>
-
-                <p style="color: #e65100; font-size: 1.8rem; font-weight: bold; margin: 20px 0;">
-                    {{ number_format($product->price, 0) }} ل.س
-                </p>
-
-                <div style="background: #fdfdfd; padding: 15px; border-radius: 10px; border-right: 4px solid #005a9c; margin-bottom: 25px;">
-                    <h4 style="margin-top: 0; color: #005a9c;">وصف المنتج:</h4>
-                    <p style="line-height: 1.7; color: #555;">{{ $product->description }}</p>
-                </div>
+        <!-- معلومات المنتج والمتجر -->
+        <div style="flex: 1.5;">
+            <h1 style="color: #0B1B3D; margin-top: 0; font-size: 1.8rem;">{{ $product->name }}</h1>
+            <p style="color: #1E6FB8; font-size: 1.5rem; font-weight: bold; margin: 10px 0;">{{ number_format($product->price, 0) }} ل.س</p>
+            
+            <div style="margin: 20px 0; background: #F6F8FB; padding: 15px; border-radius: 10px; border: 1px solid #E5E7EB;">
+                <h4 style="margin: 0 0 8px 0; color: #0B1B3D; font-size: 1rem;">وصف المنتج:</h4>
+                <p style="color: #4B5563; margin: 0; line-height: 1.6;">{{ $product->description ?? 'لا يوجد وصف متاح لهذا المنتج.' }}</p>
             </div>
 
-            <div style="display: flex; gap: 15px;">
-                <form action="{{ route('cart.add', $product->id) }}" method="POST" style="flex: 3;">
-                    @csrf
-                    <button type="submit" style="width: 100%; padding: 15px; background: #005a9c; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 1.1rem; font-weight: bold;">
-                        إضافة إلى السلة 🛒
-                    </button>
-                </form>
-                <form action="{{ route('wishlist.toggle', $product->id) }}" method="POST" style="flex: 1;">
-                    @csrf
-                    <button type="submit" style="width: 100%; padding: 15px; background: #f0f0f0; border: none; border-radius: 10px; cursor: pointer; font-size: 1.2rem;">
-                        {{ auth()->check() && auth()->user()->wishlist()->where('product_id', $product->id)->exists() ? '❤️' : '🤍' }}
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div style="margin-top: 40px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-        <h3 style="color: #005a9c; border-bottom: 2px solid #eee; padding-bottom: 15px;">آراء وتجارب العملاء 💬</h3>
-        
-        <div style="margin-top: 20px;">
-            @forelse($product->reviews as $review)
-                <div style="padding: 15px; border-bottom: 1px solid #f5f5f5; margin-bottom: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: #333;">{{ $review->user->name }}</strong>
-                        <span style="color: #f39c12;">
-                            @for($i=1; $i<=5; $i++) {{ $i <= $review->rating ? '★' : '☆' }} @endfor
-                        </span>
-                    </div>
-                    <p style="margin: 10px 0 0; color: #666; font-size: 0.95rem;">{{ $review->comment }}</p>
-                </div>
-            @empty
-                <p style="text-align: center; color: #999; padding: 20px;">لا توجد تعليقات لهذا المنتج بعد.</p>
-            @endforelse
-        </div>
-    </div>
-
-    <div style="margin-top: 40px; background: #fff; padding: 30px; border-radius: 20px; border: 1px solid #e0e0e0;">
-        <h3 style="color: #005a9c; margin-bottom: 25px;">أسئلة العملاء ❓</h3>
-        
-        <div style="margin-bottom: 30px;">
-            @forelse($product->questions as $question)
-                <div style="background: #fcfcfc; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #f0f0f0;">
-                    <p style="font-weight: bold; color: #333; margin-bottom: 10px;">👤 {{ $question->user->name }}: 
-                        <span style="font-weight: normal;">{{ $question->content }}</span>
-                    </p>
+            <!-- بيانات المتجر وخيار التقييمات -->
+            @if($product->store)
+                <div style="background: rgba(212, 175, 55, 0.1); padding: 15px; border-radius: 10px; border: 1px solid #D4AF37; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #0B1B3D; font-size: 1rem; display: flex; align-items: center; gap: 5px;">
+                        <span>🏪</span> بيانات المتجر:
+                    </h4>
+                    <p style="margin: 4px 0; color: #111827; font-size: 0.95rem;"><strong>اسم المتجر:</strong> {{ $product->store->name }}</p>
+                    <p style="margin: 4px 0; color: #64748B; font-size: 0.9rem;"><strong>📍 العنوان:</strong> {{ $product->store->address ?? 'غير محدد' }}</p>
+                    <p style="margin: 4px 0; color: #64748B; font-size: 0.9rem;"><strong>📞 الهاتف:</strong> {{ $product->store->phone ?? 'غير متوفر' }}</p>
                     
-                    @if($question->answer)
-                        <div style="margin-right: 20px; background: #e3f2fd; padding: 10px; border-radius: 8px; border-right: 3px solid #005a9c;">
-                            <p style="margin: 0; color: #005a9c;"><strong>رد التاجر:</strong> {{ $question->answer }}</p>
-                        </div>
-                    {{-- عرض نموذج الرد للتاجر صاحب المتجر فقط --}}
-                    @elseif(auth()->check() && auth()->user()->role == 'vendor' && $product->store->user_id == auth()->id())
-                        <form action="{{ route('questions.answer', $question->id) }}" method="POST" style="margin-right: 20px; margin-top: 10px;">
-                            @csrf
-                            <textarea name="answer" rows="2" style="width: 100%; border: 1px solid #ccc; border-radius: 5px; padding: 5px;" placeholder="اكتب ردك هنا..." required></textarea>
-                            <button type="submit" style="margin-top: 5px; background: #005a9c; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">إرسال الرد</button>
-                        </form>
-                    @else
-                        <p style="font-size: 0.85rem; color: #999; margin-right: 20px;">(بانتظار رد التاجر...)</p>
-                    @endif
+                    <!-- زر الانتقال لصفحة المتجر والتقييمات -->
+                    <div style="margin-top: 12px; text-align: left;">
+                        <a href="{{ route('store.show', $product->store->user_id ?? 1) }}" style="background: #0B1B3D; color: #D4AF37; padding: 6px 15px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: inline-block; border: 1px solid #D4AF37;">
+                            ⭐ عرض المتجر والتقييمات
+                        </a>
+                    </div>
                 </div>
-            @empty
-                <p style="color: #999;">لا توجد أسئلة بعد.</p>
-            @endforelse
-        </div>
-
-        @auth
-            @if(auth()->user()->role == 'customer')
-                <form action="{{ route('questions.store', $product->id) }}" method="POST" style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-                    @csrf
-                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">اطرح سؤالاً:</label>
-                    <textarea name="content" rows="3" style="width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px;" required></textarea>
-                    <button type="submit" style="margin-top: 10px; background: #005a9c; color: white; padding: 8px 20px; border: none; border-radius: 5px; cursor: pointer;">إرسال</button>
-                </form>
             @endif
-        @else
-            <p style="text-align: center; background: #fff3e0; padding: 10px; border-radius: 8px;">يجب <a href="/login-as-customer" style="color: #e65100; font-weight: bold;">تسجيل الدخول كعميل</a> لطرح الأسئلة.</p>
+
+            <!-- زر إضافة إلى السلة -->
+            <form action="{{ route('cart.add', $product->id) }}" method="POST">
+                @csrf
+                <button type="submit" style="background: #D4AF37; color: #0B1B3D; border: none; padding: 12px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; width: 100%; transition: opacity 0.3s;">
+                    إضافة إلى السلة 🛒
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- قسم آراء وتجارب العملاء (التقييمات) -->
+    <div style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border: 1px solid #E5E7EB; margin-bottom: 30px;">
+        <h3 style="color: #0B1B3D; margin-top: 0; border-right: 4px solid #1E6FB8; padding-right: 10px;">آراء وتجارب العملاء</h3>
+        
+        @forelse($product->reviews as $review)
+            <div style="padding: 15px; border-bottom: 1px solid #E5E7EB; margin-top: 15px;">
+                <strong>{{ $review->user->name ?? 'مستخدم' }}</strong>
+                <span style="color: #D4AF37; float: left;">{{ str_repeat('⭐', $review->rating) }}</span>
+                <p style="margin: 5px 0 0 0; color: #4B5563;">{{ $review->comment }}</p>
+            </div>
+        @empty
+            <p style="color: #64748B; margin-top: 15px;">لا توجد تقييمات لهذا المنتج حتى الآن.</p>
+        @endforelse
+
+        <!-- نموذج إضافة تقييم -->
+        @auth
+            <form action="{{ route('reviews.store', $product->id) }}" method="POST" style="margin-top: 25px; background: #F6F8FB; padding: 20px; border-radius: 12px;">
+                @csrf
+                <h4 style="margin-top: 0; color: #0B1B3D;">أضف تقييمك للمنتج:</h4>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #374151;">التقييم:</label>
+                    <select name="rating" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D1D5DB; font-family: 'Cairo';">
+                        <option value="5">⭐⭐⭐⭐⭐ (ممتاز)</option>
+                        <option value="4">⭐⭐⭐⭐ (جيد جداً)</option>
+                        <option value="3">⭐⭐⭐ (متوسط)</option>
+                        <option value="2">⭐⭐ (ضعيف)</option>
+                        <option value="1">⭐ (سيء)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold; color: #374151;">التعليق:</label>
+                    <textarea name="comment" rows="3" placeholder="اكتب رأيك بصراحة..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D1D5DB; font-family: 'Cairo';"></textarea>
+                </div>
+                <button type="submit" style="background: #0B1B3D; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Cairo';">إرسال التقييم</button>
+            </form>
         @endauth
     </div>
+
+    <!-- قسم الأسئلة والأجوبة -->
+    <div style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border: 1px solid #E5E7EB;">
+        <h3 style="color: #0B1B3D; margin-top: 0; border-right: 4px solid #D4AF37; padding-right: 10px;">أسئلة العملاء</h3>
+        
+        @forelse($product->questions as $question)
+            <div style="padding: 15px; border-bottom: 1px solid #E5E7EB; margin-top: 15px;">
+                <p style="margin: 0; font-weight: bold; color: #0B1B3D;">سؤال: {{ $question->question }} <span style="font-weight: normal; font-size: 0.85rem; color: #64748B;">({{ $question->user->name ?? 'عميل' }})</span></p>
+                @if($question->answer)
+                    <p style="margin: 8px 0 0 15px; color: #1E6FB8; background: #F6F8FB; padding: 10px; border-radius: 8px;"><strong>إجابة المتجر:</strong> {{ $question->answer }}</p>
+                @else
+                    <p style="margin: 5px 0 0 15px; color: #9CA3AF; font-size: 0.85rem;">في انتظار رد التاجر...</p>
+                @endif
+            </div>
+        @empty
+            <p style="color: #64748B; margin-top: 15px;">لا توجد أسئلة مسجلة لهذا المنتج.</p>
+        @endforelse
+
+        <!-- نموذج طرح سؤال -->
+        @auth
+            <form action="{{ route('questions.store', $product->id) }}" method="POST" style="margin-top: 25px; background: #F6F8FB; padding: 20px; border-radius: 12px;">
+                @csrf
+                <h4 style="margin-top: 0; color: #0B1B3D;">لديك سؤال عن المنتج؟</h4>
+                <div style="margin-bottom: 12px;">
+                    <textarea name="question" rows="2" placeholder="اكتب سؤالك هنا..." required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #D1D5DB; font-family: 'Cairo';"></textarea>
+                </div>
+                <button type="submit" style="background: #1E6FB8; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: 'Cairo';">طرح السؤال</button>
+            </form>
+        @endauth
+    </div>
+
 </div>
 @endsection
