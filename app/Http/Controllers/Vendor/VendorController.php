@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Order;
 use App\Models\Wallet;
+use App\Notifications\OrderStatusChangedNotification; // استيراد كلاس إشعار العميل
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 
@@ -34,32 +35,45 @@ class VendorController extends Controller
         return view('vendor.orders', compact('orders'));
     }
 
-    // الدالة الجديدة لتحديث الحالة (تم الربط مع الـ Route الجديد)
+    // تحديث حالة الطلب والمنطق المالي وإرسال الإشعار
     public function updateStatus(Request $request, $id)
     {
         $order = Order::where('vendor_id', Auth::id())->findOrFail($id);
 
-        // المنطق المالي الذكي (إيداع/استرجاع)
+        // 1. إضافة رصيد للتاجر عند قبول الطلب وبدء تنفيذه
         if ($order->status == 'pending' && in_array($request->status, ['processing', 'shipped', 'delivered'])) {
             $vendorWallet = Wallet::firstOrCreate(['user_id' => $order->vendor_id]);
             $vendorWallet->balance += $order->total_price;
             $vendorWallet->save();
         } 
+        // 2. إعادة المال للعميل إذا ألغى التاجر الطلب (فقط إذا كانت طريقة الدفع هي المحفظة)
         elseif ($order->status != 'pending' && $order->status != 'cancelled' && $request->status == 'cancelled') {
-            $customerWallet = Wallet::where('user_id', $order->customer_id)->first();
-            if ($customerWallet) {
-                $customerWallet->balance += $order->total_price;
-                $customerWallet->save();
+            if (strtolower(trim($order->payment_method ?? '')) === 'wallet') {
+                $customerWallet = Wallet::where('user_id', $order->customer_id)->first();
+                if ($customerWallet) {
+                    $customerWallet->balance += $order->total_price;
+                    $customerWallet->save();
+                }
+            }
+
+            // إعادة المخزون في حال الإلغاء
+            if ($order->product) {
+                $order->product->increment('stock', $order->quantity);
             }
         }
 
+        // تحديث الحالة
         $order->status = $request->status;
         $order->save();
 
-        return back()->with('success', 'تم تحديث حالة الطلب إلى: ' . $request->status);
+        // 3. إرسال الإشعار للعميل صاحب الطلب
+        if ($order->customer) {
+            $order->customer->notify(new OrderStatusChangedNotification($order));
+        }
+
+        return back()->with('success', 'تم تحديث حالة الطلب بنجاح وإشعار العميل.');
     }
 
-    // الاحتفاظ بالدالة القديمة للعمليات الأخرى إذا احتجتها
     public function updateOrder(Request $request, $id)
     {
         return $this->updateStatus($request, $id);
@@ -78,9 +92,16 @@ class VendorController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric',
             'stock' => 'required|integer', 
-            'category_id' => 'required|exists:categories,id',
+            'category' => 'nullable|string|max:255',
+            'category_id' => 'nullable',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
+
+        if ($request->filled('category')) {
+            $catRecord = Category::firstOrCreate(['name' => $request->category]);
+            $data['category_id'] = $catRecord->id;
+            $data['category'] = $request->category;
+        }
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('products', 'public');
@@ -106,9 +127,16 @@ class VendorController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric',
             'stock' => 'required|integer',
-            'category_id' => 'required|exists:categories,id',
+            'category' => 'nullable|string|max:255',
+            'category_id' => 'nullable',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
+
+        if ($request->filled('category')) {
+            $catRecord = Category::firstOrCreate(['name' => $request->category]);
+            $data['category_id'] = $catRecord->id;
+            $data['category'] = $request->category;
+        }
 
         if ($request->hasFile('image')) {
             if ($product->image) Storage::disk('public')->delete($product->image);
@@ -125,5 +153,41 @@ class VendorController extends Controller
         if ($product->image) Storage::disk('public')->delete($product->image);
         $product->delete();
         return redirect()->route('vendor.dashboard')->with('success', 'تم حذف المنتج!');
+    }
+
+    // عرض صفحة إعدادات المتجر والهوية
+    public function settings()
+    {
+        $store = auth()->user()->store;
+        return view('vendor.settings', compact('store'));
+    }
+
+    // حفظ وتحديث بيانات المتجر والشعار
+    public function updateSettings(Request $request)
+    {
+        $store = auth()->user()->store;
+
+        $data = $request->validate([
+            'name'        => 'required|string|max:255',
+            'phone'       => 'nullable|string|max:20',
+            'address'     => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'logo'        => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        if ($request->hasFile('logo')) {
+            if ($store && $store->logo) {
+                Storage::disk('public')->delete($store->logo);
+            }
+            $data['logo'] = $request->file('logo')->store('stores', 'public');
+        }
+
+        if ($store) {
+            $store->update($data);
+        } else {
+            auth()->user()->store()->create($data);
+        }
+
+        return redirect()->back()->with('success', 'تم حفظ وتحديث بيانات وشعار المتجر بنجاح!');
     }
 }

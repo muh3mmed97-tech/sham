@@ -22,7 +22,7 @@
     </div>
 
     <!-- معلومات المتجر ومعلومات المشتري -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
         
         <!-- تفاصيل المتجر -->
         <div style="background: #F6F8FB; padding: 15px; border-radius: 12px; border: 1px solid #E5E7EB;">
@@ -43,7 +43,7 @@
     </div>
 
     <!-- جدول المنتجات -->
-    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
         <thead>
             <tr style="background: #0B1B3D; color: white; text-align: right;">
                 <th style="padding: 12px 15px; border-top-right-radius: 8px; border-bottom-right-radius: 8px;">المنتج</th>
@@ -62,8 +62,20 @@
         </tbody>
     </table>
 
-    <!-- المجموع الكلي -->
-    <div style="display: flex; justify-content: flex-end; border-top: 2px solid #0B1B3D; padding-top: 15px;">
+    <!-- المجموع الكلي مع حالة وطريقة الدفع الصريحة -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #0B1B3D; padding-top: 15px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            @if(($order->payment_method ?? 'wallet') === 'cod')
+                <div style="background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem;">
+                    📌 ملاحظة: الدفع عند الاستلام
+                </div>
+            @else
+                <div style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC; padding: 8px 16px; border-radius: 8px; font-weight: bold; font-size: 0.95rem;">
+                    ✅ تم الدفع إلكترونياً
+                </div>
+            @endif
+        </div>
+
         <div style="text-align: left;">
             <p style="margin: 0; color: #64748B; font-size: 0.9rem;">المجموع الكلي:</p>
             <h3 style="margin: 3px 0 0 0; color: #0B1B3D; font-size: 1.5rem;">{{ number_format($order->total_price ?? 0, 0) }} ل.س</h3>
@@ -97,7 +109,6 @@ function printInvoice() {
     printWindow.document.close();
     printWindow.focus();
     
-    // تأخير بسيط لضمان تحميل الصورة قبل أمر الطباعة
     setTimeout(function() {
         printWindow.print();
         printWindow.close();

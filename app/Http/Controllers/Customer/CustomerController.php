@@ -10,14 +10,27 @@ use Illuminate\Support\Facades\Auth;
 
 class CustomerController extends Controller
 {
-    // عرض لوحة تحكم العميل مع دعم البحث والفلترة
+    // عرض لوحة تحكم العميل مع دعم البحث والفلترة الذكية
     public function index(Request $request)
     {
-        $query = Product::query();
+        $query = Product::query()->with('category');
 
-        // 1. الفلترة حسب التصنيف
-        if ($request->has('category')) {
-            $query->where('category_id', $request->category);
+        // 1. الفلترة حسب القسم (بالاسم أو بالـ ID)
+        if ($request->filled('category')) {
+            $category = $request->category;
+
+            $query->where(function ($q) use ($category) {
+                if (is_numeric($category)) {
+                    $q->where('category_id', $category);
+                } else {
+                    $cleanName = preg_replace('/^ال/', '', trim($category));
+
+                    $q->whereHas('category', function ($catQuery) use ($category, $cleanName) {
+                        $catQuery->where('name', 'like', '%' . $cleanName . '%')
+                                 ->orWhere('name', 'like', '%' . $category . '%');
+                    });
+                }
+            });
         }
 
         // 2. البحث حسب الاسم
@@ -37,12 +50,11 @@ class CustomerController extends Controller
         return view('customer.orders', compact('orders'));
     }
 
-    // الدالة المعدلة لعرض الفاتورة مع معلومات المتجر
+    // عرض الفاتورة مع معلومات المتجر
     public function invoice($id)
     {
-        // جلب الطلب مع بيانات المنتج وعلاقة المتجر المرتبط بالمنتج
         $order = Order::where('customer_id', Auth::id())
-                      ->with(['product', 'product.store']) // جلب بيانات المتجر عبر المنتج
+                      ->with(['product', 'product.store'])
                       ->findOrFail($id);
                       
         return view('customer.invoice', compact('order'));

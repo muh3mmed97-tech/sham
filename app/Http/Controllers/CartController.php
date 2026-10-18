@@ -6,10 +6,12 @@ use App\Models\Cart;
 use App\Models\Product;
 use App\Models\Wallet;
 use App\Models\Order; 
+use App\Models\User;
+use App\Notifications\NewOrderNotification; // استيراد كلاس إشعار التاجر
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail; // تأكد من وجود هذا السطر
+use Illuminate\Support\Facades\Mail;
 
 class CartController extends Controller
 {
@@ -63,8 +65,13 @@ class CartController extends Controller
     }
 
     // إتمام الطلب
-    public function checkout()
+    public function checkout(Request $request)
     {
+        // التحقق من صحة طريقة الدفع المدخلة
+        $request->validate([
+            'payment_method' => 'required|in:wallet,cod',
+        ]);
+
         $user = Auth::user();
         $cartItems = Cart::where('user_id', $user->id)->with('product.store.user')->get();
         
@@ -72,46 +79,86 @@ class CartController extends Controller
             return back()->with('error', 'السلة فارغة.');
         }
 
-        $total = $cartItems->sum(fn($i) => $i->product->price * $i->quantity);
-        $wallet = $user->wallet;
+        // حساب الإجمالي
+        $total = $cartItems->sum(function($item) {
+            return $item->product ? ($item->product->price * $item->quantity) : 0;
+        });
 
-        if ($wallet && $wallet->balance >= $total) {
-            
-            return DB::transaction(function () use ($user, $cartItems, $total, $wallet) {
-                $wallet->balance -= $total;
-                $wallet->save();
+        $wallet = Wallet::firstOrCreate(['user_id' => $user->id]);
 
-                $lastOrder = null;
-
-                foreach ($cartItems as $item) {
-                    $vendor = $item->product->store->user;
-                    
-                    $lastOrder = Order::create([
-                        'vendor_id' => $vendor->id,
-                        'customer_id' => $user->id,
-                        'product_id' => $item->product_id,
-                        'product_name' => $item->product->name,
-                        'price' => $item->product->price,
-                        'quantity' => $item->quantity,
-                        'total_price' => $item->product->price * $item->quantity,
-                        'status' => 'pending'
-                    ]);
-                }
-
-                Cart::where('user_id', $user->id)->delete();
-
-                // إرسال الفاتورة عبر البريد الإلكتروني
-                Mail::send('emails.invoice', ['order' => $lastOrder], function($message) use ($user, $lastOrder) {
-                    $message->to($user->email)
-                            ->subject('فاتورة طلبك من منصة شام #' . $lastOrder->id);
-                });
-
-                // التوجيه إلى الفاتورة
-                return redirect()->route('customer.invoice', $lastOrder->id)
-                                 ->with('success', 'تمت عملية الشراء بنجاح وتم إرسال نسخة لبريدك!');
-            });
+        // التحقق من الرصيد فقط في حال اختيار الدفع عبر المحفظة
+        if ($request->payment_method == 'wallet' && $wallet->balance < $total) {
+            return back()->with('error', 'رصيدك غير كافٍ لإتمام عملية الشراء. يرجى شحن المحفظة أو اختيار الدفع عند الاستلام.');
         }
 
-        return back()->with('error', 'رصيدك غير كافٍ لإتمام عملية الشراء.');
+        return DB::transaction(function () use ($user, $cartItems, $total, $wallet, $request) {
+            
+            // خصم المبلغ من المحفظة فقط عند اختيار الدفع عبر المحفظة
+            if ($request->payment_method == 'wallet') {
+                $wallet->balance -= $total;
+                $wallet->save();
+            }
+
+            $lastOrder = null;
+
+            foreach ($cartItems as $item) {
+                if (!$item->product) continue;
+
+                // جلب معرف التاجر بأمان
+                $vendorId = $item->product->store->user_id 
+                        ?? $item->product->store->user->id 
+                        ?? $item->product->vendor_id 
+                        ?? 1;
+
+                $order = Order::create([
+                    'vendor_id'      => $vendorId,
+                    'customer_id'    => $user->id,
+                    'product_id'     => $item->product_id,
+                    'product_name'   => $item->product->name,
+                    'price'          => $item->product->price,
+                    'quantity'       => $item->quantity,
+                    'total_price'    => $item->product->price * $item->quantity,
+                    'payment_method' => $request->payment_method, // حفظ طريقة الدفع (wallet أو cod)
+                    'status'         => 'pending'
+                ]);
+
+                $lastOrder = $order;
+
+                // إنقاص المخزون
+                $item->product->decrement('stock', $item->quantity);
+
+                // إرسال إشعار فوري للتاجر بوجود طلب جديد
+                $vendor = User::find($vendorId);
+                if ($vendor) {
+                    $vendor->notify(new NewOrderNotification($order));
+                }
+            }
+
+            // تفريغ السلة بعد إتمام الطلب بنجاح
+            Cart::where('user_id', $user->id)->delete();
+
+            // محاولة إرسال البريد الإلكتروني دون توقف النظام في حال البيئة المحلية
+            try {
+                if (view()->exists('emails.invoice') && $lastOrder) {
+                    Mail::send('emails.invoice', ['order' => $lastOrder], function($message) use ($user, $lastOrder) {
+                        $message->to($user->email)
+                                ->subject('فاتورة طلبك من فُرات ستور #' . $lastOrder->id);
+                    });
+                }
+            } catch (\Exception $e) {
+                // تجاوز الخطأ محلياً
+            }
+
+            $successMessage = $request->payment_method == 'wallet' 
+                ? 'تمت عملية الشراء بنجاح وخصم المبلغ من محفظتك!' 
+                : 'تم تقديم طلبك بنجاح وسيتم الدفع عند الاستلام!';
+
+            if ($lastOrder) {
+                return redirect()->route('customer.invoice', $lastOrder->id)
+                                 ->with('success', $successMessage);
+            }
+
+            return redirect()->route('customer.orders')->with('success', 'تم تسجيل طلباتك بنجاح!');
+        });
     }
 }

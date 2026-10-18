@@ -14,9 +14,10 @@ class Order extends Model
         'customer_id',
         'product_id',
         'product_name',
-        'price',         // <--- أضفنا هذا السطر المهم جداً
+        'price',
         'quantity',
         'total_price',
+        'payment_method', // مضاف لتخزين cod أو wallet في قاعدة البيانات
         'status',
     ];
 

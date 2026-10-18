@@ -8,10 +8,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-// استيراد الموديلات اللازمة
 use App\Models\Store; 
 use App\Models\Wallet;
 use App\Models\Wishlist;
+use App\Models\Order;
 
 class User extends Authenticatable
 {
@@ -20,8 +20,12 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'phone',               // مضاف: لحفظ رقم هاتف العميل والتاجر
+        'address',             // مضاف: لتحديث عنوان التوصيل
         'password',
         'role',
+        'otp_code',            // مضاف: لرمز التحقق المؤقت
+        'phone_verified_at',   // مضاف: لتأكيد تفعيل الحساب
     ];
 
     protected $hidden = [
@@ -33,6 +37,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -60,9 +65,15 @@ class User extends Authenticatable
         return $this->hasOne(Wallet::class);
     }
 
-    // علاقة المستخدم بقائمة المفضلة (التي قمنا بإضافتها)
+    // علاقة المستخدم بقائمة المفضلة
     public function wishlist(): HasMany
     {
         return $this->hasMany(Wishlist::class);
+    }
+
+    // علاقة المستخدم بطلباته
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'customer_id');
     }
 }
