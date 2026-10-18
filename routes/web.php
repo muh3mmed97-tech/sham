@@ -9,6 +9,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\StoreReviewController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\Admin\AdminController;
+use App\Http\Controllers\DisputeController;
 use App\Models\User;
 use App\Models\Store;
 use App\Models\Product; 
@@ -193,6 +194,9 @@ Route::middleware(['auth'])->group(function () {
         return redirect()->back()->with('error', 'عذراً، لا يمكن إلغاء هذا الطلب لأنه قيد التنفيذ أو تم شحنه.');
     })->name('customer.orders.cancel');
 
+    // مسار تقديم طلب إرجاع أو نزاع للطلب
+    Route::post('/orders/{id}/dispute', [DisputeController::class, 'store'])->name('customer.dispute.store');
+
     // مسارات الملف الشخصي ومعلومات الحساب العامة
     Route::get('/profile', function () {
         return view('customer.profile');
@@ -220,12 +224,13 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/wallet/charge', [WalletController::class, 'charge'])->name('wallet.charge');
     Route::post('/wallet/withdraw', [WalletController::class, 'withdraw'])->name('wallet.withdraw');
 
-    // مسارات السلة
+    // مسارات السلة والكوبونات
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/add/{id}', [CartController::class, 'addToCart'])->name('cart.add');
     Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
     Route::patch('/cart/update/{id}', [CartController::class, 'update'])->name('cart.update');
     Route::post('/cart/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
+    Route::post('/cart/apply-coupon', [CartController::class, 'applyCoupon'])->name('cart.applyCoupon'); // مسار تفعيل الكوبون
 
     // مسارات المفضلة
     Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
@@ -254,7 +259,20 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin')->middleware('role:admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
         Route::get('/vendors', [AdminController::class, 'vendors'])->name('admin.vendors');
+        Route::delete('/vendors/{id}', [AdminController::class, 'deleteVendor'])->name('admin.vendors.delete');
         Route::get('/orders', [AdminController::class, 'orders'])->name('admin.orders');
+        Route::put('/orders/{id}/status', [AdminController::class, 'updateOrderStatus'])->name('admin.orders.status');
+        Route::get('/wallets', [AdminController::class, 'wallets'])->name('admin.wallets');
+        Route::post('/wallets/adjust', [AdminController::class, 'adjustWallet'])->name('admin.wallets.adjust');
+        
+        // مسارات إدارة الكوبونات وقسائم الخصم
+        Route::get('/coupons', [AdminController::class, 'coupons'])->name('admin.coupons');
+        Route::post('/coupons', [AdminController::class, 'storeCoupon'])->name('admin.coupons.store');
+        Route::delete('/coupons/{id}', [AdminController::class, 'deleteCoupon'])->name('admin.coupons.delete');
+
+        // مسارات إدارة النزاعات والإرجاع
+        Route::get('/disputes', [DisputeController::class, 'adminIndex'])->name('admin.disputes');
+        Route::put('/disputes/{id}', [DisputeController::class, 'adminUpdate'])->name('admin.disputes.update');
     });
 
     // مسارات التاجر
@@ -302,7 +320,7 @@ Route::get('/store/{id}', function ($id) {
     return view('store.show', compact('store', 'storeModel', 'products', 'reviews', 'avgRating'));
 })->name('store.show');
 
-// 4. المسار العام
+// 4. المسار العام (الصفحة الرئيسية مع البحث، الفلترة، والتقسيم)
 Route::get('/{category?}', function (Request $request, $category = null) {
     if (Auth::check()) {
         if (Auth::user()->role == 'admin') return redirect()->route('admin.dashboard');
@@ -310,8 +328,9 @@ Route::get('/{category?}', function (Request $request, $category = null) {
         if (Auth::user()->role == 'customer') return redirect()->route('customer.dashboard');
     }
 
-    $products = Product::query()->with('reviews')->latest();
+    $products = Product::query()->with(['reviews', 'store'])->latest();
 
+    // تصفية حسب الفئة
     if ($category && $category !== 'all') {
         $products->where(function ($q) use ($category) {
             if (is_numeric($category)) {
@@ -324,12 +343,21 @@ Route::get('/{category?}', function (Request $request, $category = null) {
         });
     }
 
+    // تصفية حسب البحث
     if ($request->filled('search')) {
         $products->where('name', 'like', '%' . $request->search . '%');
     }
 
+    // تصفية حسب السعر الأدنى والأقصى (إن وجد)
+    if ($request->filled('min_price')) {
+        $products->where('price', '>=', $request->min_price);
+    }
+    if ($request->filled('max_price')) {
+        $products->where('price', '<=', $request->max_price);
+    }
+
     return view('welcome', [
-        'products' => $products->get(),
+        'products' => $products->paginate(12)->withQueryString(),
         'activeCategory' => $category,
     ]);
 })->name('home');

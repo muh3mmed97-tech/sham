@@ -17,11 +17,31 @@ class VendorController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $products = $user->store ? $user->store->products()->with('questions')->latest()->get() : collect();
-        $orders = Order::where('vendor_id', $user->id)->latest()->take(5)->get();
+        $store = $user->store;
+        
+        $products = $store ? $store->products()->with('questions')->latest()->get() : collect();
+        $orders = Order::where('vendor_id', $user->id)->with(['customer', 'product'])->latest()->get();
+
+        // الحسابات والتقارير المالية للتاجر
+        $completedOrders = $orders->where('status', 'completed');
+        $totalSales = $completedOrders->sum('total_price');
+        
+        // صافي أرباح التاجر بعد خصم عمولة المنصة (5%)
+        $platformCommission = $totalSales * 0.05;
+        $netEarnings = $totalSales - $platformCommission;
+
+        $stats = [
+            'total_products'   => $products->count(),
+            'total_orders'     => $orders->count(),
+            'completed_orders' => $completedOrders->count(),
+            'total_sales'      => $totalSales,
+            'net_earnings'     => $netEarnings,
+        ];
+
+        $recentOrders = $orders->take(5);
         $wallet = Wallet::firstOrCreate(['user_id' => $user->id]);
 
-        return view('vendor.dashboard', compact('products', 'orders', 'wallet'));
+        return view('vendor.dashboard', compact('products', 'orders', 'wallet', 'stats', 'recentOrders', 'store'));
     }
 
     public function products()

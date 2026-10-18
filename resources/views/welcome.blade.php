@@ -28,7 +28,7 @@
 
             <!-- إلكترونيات -->
             <a href="{{ route('home', 'إلكترونيات') }}" style="text-decoration: none; text-align: center;">
-                <div class="circle-cat-item {{ (request()->route('category') == 'إلكترونيات' || request('category') == 'إلكترونيات') ? 'circle-active' : '' }}">
+                <div class="circle-cat-item {{ (request()->route('category') == 'إلكترونيات') ? 'circle-active' : '' }}">
                     <div class="circle-avatar">📱</div>
                     <span class="circle-text">إلكترونيات</span>
                 </div>
@@ -36,7 +36,7 @@
 
             <!-- أدوات منزلية -->
             <a href="{{ route('home', 'أدوات منزلية') }}" style="text-decoration: none; text-align: center;">
-                <div class="circle-cat-item {{ (request()->route('category') == 'أدوات منزلية' || request('category') == 'أدوات منزلية') ? 'circle-active' : '' }}">
+                <div class="circle-cat-item {{ (request()->route('category') == 'أدوات منزلية') ? 'circle-active' : '' }}">
                     <div class="circle-avatar">🏠</div>
                     <span class="circle-text">أدوات منزلية</span>
                 </div>
@@ -44,7 +44,7 @@
 
             <!-- أزياء -->
             <a href="{{ route('home', 'أزياء') }}" style="text-decoration: none; text-align: center;">
-                <div class="circle-cat-item {{ (request()->route('category') == 'أزياء' || request('category') == 'أزياء') ? 'circle-active' : '' }}">
+                <div class="circle-cat-item {{ (request()->route('category') == 'أزياء') ? 'circle-active' : '' }}">
                     <div class="circle-avatar">👕</div>
                     <span class="circle-text">أزياء</span>
                 </div>
@@ -52,7 +52,7 @@
 
             <!-- مأكولات ومشروبات -->
             <a href="{{ route('home', 'مأكولات ومشروبات') }}" style="text-decoration: none; text-align: center;">
-                <div class="circle-cat-item {{ (request()->route('category') == 'مأكولات ومشروبات' || request('category') == 'مأكولات ومشروبات') ? 'circle-active' : '' }}">
+                <div class="circle-cat-item {{ (request()->route('category') == 'مأكولات ومشروبات') ? 'circle-active' : '' }}">
                     <div class="circle-avatar">☕</div>
                     <span class="circle-text">مأكولات ومشروبات</span>
                 </div>
@@ -60,7 +60,7 @@
 
             <!-- رياضة -->
             <a href="{{ route('home', 'رياضة') }}" style="text-decoration: none; text-align: center;">
-                <div class="circle-cat-item {{ (request()->route('category') == 'رياضة' || request('category') == 'رياضة') ? 'circle-active' : '' }}">
+                <div class="circle-cat-item {{ (request()->route('category') == 'رياضة') ? 'circle-active' : '' }}">
                     <div class="circle-avatar">⚽</div>
                     <span class="circle-text">رياضة</span>
                 </div>
@@ -68,7 +68,7 @@
 
             <!-- مستحضرات تجميل -->
             <a href="{{ route('home', 'مستحضرات تجميل') }}" style="text-decoration: none; text-align: center;">
-                <div class="circle-cat-item {{ (request()->route('category') == 'مستحضرات تجميل' || request('category') == 'مستحضرات تجميل') ? 'circle-active' : '' }}">
+                <div class="circle-cat-item {{ (request()->route('category') == 'مستحضرات تجميل') ? 'circle-active' : '' }}">
                     <div class="circle-avatar">💄</div>
                     <span class="circle-text">مستحضرات تجميل</span>
                 </div>
@@ -77,7 +77,7 @@
         </div>
     </div>
 
-    <!-- 3. كتل الخصومات الترويجية السريعة (Discount Bricks) المستوحاة من Trendyol -->
+    <!-- 3. كتل الخصومات الترويجية السريعة (Discount Bricks) -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 35px;">
         <div class="promo-brick" style="background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%); border-right: 4px solid #EA580C;">
             <span style="font-size: 1.8rem; font-weight: 800; color: #EA580C;">30%</span>
@@ -109,7 +109,7 @@
         </div>
     </div>
 
-    <!-- 4. سلايدر "المنتجات الأكثر طلباً" (Popüler Ürünler) بنمط Trendyol الأفقي -->
+    <!-- 4. سلايدر "المنتجات الأكثر طلباً" بنمط Trendyol الأفقي -->
     <div style="background: #FFFFFF; border-radius: 20px; padding: 22px; margin-bottom: 40px; border: 1px solid #E2E8F0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); position: relative;">
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
@@ -124,17 +124,14 @@
             </div>
         </div>
 
-        <!-- الشريط الأفقي التمريري للسلايدر -->
         <div id="trendyolSlider" style="display: flex; gap: 16px; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 10px; scrollbar-width: none;">
             @forelse($products as $product)
                 <div class="trendy-product-card" style="min-width: 220px; max-width: 220px; flex-shrink: 0;">
                     
-                    <!-- حاوية الصورة مع الشارات والقلب العائم -->
                     <div class="trendy-img-box">
                         <span class="badge-badge badge-bestseller">الأكثر طلباً 🔥</span>
                         <span class="badge-badge badge-shipping">شحن سريع</span>
                         
-                        <!-- زر المفضلة العائم على الصورة -->
                         <form action="{{ route('wishlist.toggle', $product->id) }}" method="POST" style="position: absolute; top: 8px; left: 8px; z-index: 5;">
                             @csrf
                             <button type="submit" class="floating-heart-btn" title="إضافة للمفضلة">❤️</button>
@@ -147,7 +144,6 @@
                         </a>
                     </div>
 
-                    <!-- تفاصيل المنتج -->
                     <div style="padding: 12px; display: flex; flex-direction: column; flex: 1;">
                         <span style="font-size: 0.75rem; color: #94A3B8; font-weight: 600;">{{ $product->category->name ?? $product->category ?? 'قسم عام' }}</span>
                         
@@ -155,13 +151,11 @@
                             {{ $product->name }}
                         </a>
 
-                        <!-- التقييم بالنجوم -->
                         <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 8px; font-size: 0.8rem;">
                             <span style="color: #F59E0B;">★★★★★</span>
                             <span style="color: #64748B; font-weight: bold;">(4.9)</span>
                         </div>
 
-                        <!-- السعر والإضافة للسلة -->
                         <div style="margin-top: auto;">
                             <div style="margin-bottom: 10px;">
                                 <span style="color: #0B1B3D; font-weight: 800; font-size: 1.2rem;">
@@ -189,17 +183,17 @@
 
     </div>
 
-    <!-- 5. شبكة جميع المنتجات المتوفرة (مع التصفية بالقسم) -->
+    <!-- 5. شبكة جميع المنتجات المتوفرة (مع التصفية والتقسيم Pagination) -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 style="margin: 0; color: #0B1B3D; font-size: 1.3rem; font-weight: 800;">
             {{ request('category') ? 'منتجات قسم: ' . request('category') : 'جميع المنتجات المقترحة' }}
         </h3>
         <span style="color: #64748B; font-size: 0.9rem;">
-            المعروض: <strong>{{ $products->count() }}</strong> منتج
+            إجمالي المنتجات: <strong>{{ $products->total() }}</strong> منتج
         </span>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; margin-bottom: 35px;">
         @forelse($products as $product)
             <div class="trendy-product-card">
                 
@@ -253,6 +247,11 @@
                 <p style="font-size: 1.1rem; color: #64748B; margin: 0;">لا توجد منتجات مسجلة في هذا القسم حتى الآن.</p>
             </div>
         @endforelse
+    </div>
+
+    <!-- روابط التقسيم والتنقل بين الصفحات Pagination -->
+    <div style="display: flex; justify-content: center; margin-top: 30px;">
+        {{ $products->links() }}
     </div>
 
 </div>

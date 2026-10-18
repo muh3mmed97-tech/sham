@@ -25,7 +25,7 @@
                     <tr style="background: #F6F8FB; color: #0B1B3D; font-size: 0.9rem;">
                         <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">المنتج</th>
                         <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">التاريخ</th>
-                        <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">الحالة</th>
+                        <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">الحالة والنزاعات</th>
                         <th style="padding: 12px; border-bottom: 2px solid #E5E7EB;">التقييم</th>
                         <th style="padding: 12px; border-bottom: 2px solid #E5E7EB; text-align: center;">الإجراءات</th>
                     </tr>
@@ -34,7 +34,7 @@
                     @foreach($orders as $order)
                     @php 
                         $isCancelled = trim($order->status) == 'cancelled';
-                        $isDelivered = trim($order->status) == 'delivered';
+                        $isDelivered = in_array(trim($order->status), ['delivered', 'completed', 'shipped']);
                     @endphp
                     <tr style="font-size: 0.9rem; background: {{ $isCancelled ? '#F8FAFC' : 'transparent' }}; opacity: {{ $isCancelled ? '0.75' : '1' }};">
                         
@@ -59,6 +59,46 @@
                                 <span style="padding: 5px 10px; border-radius: 5px; background: #FEF9C3; color: #854D0E; border: 1px solid #FEF08A; font-weight: bold; font-size: 0.8rem;">
                                     {{ $order->status }}
                                 </span>
+                            @endif
+
+                            <!-- نظام النزاعات والإرجاع مع رفع الملفات والتنبيه -->
+                            @if(in_array($order->status, ['completed', 'shipped', 'delivered']))
+                                @php
+                                    $existingDispute = \App\Models\Dispute::where('order_id', $order->id)->first();
+                                @endphp
+
+                                <div style="margin-top: 8px;">
+                                    @if($existingDispute)
+                                        <span style="display: inline-block; background: #FEF9C3; color: #854D0E; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
+                                            📌 حالة النزاع: 
+                                            @if($existingDispute->status == 'pending') قيد المراجعة
+                                            @elseif($existingDispute->status == 'resolved') تم الحل ✓
+                                            @else مرفوض ✕
+                                            @endif
+                                        </span>
+                                    @else
+                                        <!-- نموذج النزاع مع دعم رفع الصور/الفيديوهات والتنبيه -->
+                                        <form action="{{ route('customer.dispute.store', $order->id) }}" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 6px; margin-top: 6px; background: #F8FAFC; padding: 10px; border-radius: 8px; border: 1px solid #E2E8F0;">
+                                            @csrf
+                                            
+                                            <!-- التنبيه الإرشادي لضمان الحقوق -->
+                                            <div style="background: #FEF3C7; color: #92400E; padding: 6px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; border: 1px solid #FDE68A; line-height: 1.4;">
+                                                ⚠️ يرجى تصوير فيديو أثناء فتح المنتج لضمان حقوق العميل والتاجر وإرفاقه أدناه.
+                                            </div>
+
+                                            <input type="text" name="reason" placeholder="سبب الإرجاع (تالف، خطأ بالشحن...)" required style="padding: 6px 8px; border: 1px solid #CBD5E1; border-radius: 4px; font-size: 0.78rem; font-family: 'Cairo';">
+                                            
+                                            <div style="display: flex; flex-direction: column; gap: 3px;">
+                                                <label style="font-size: 0.72rem; color: #334155; font-weight: bold;">إرفاق صورة أو فيديو الإثبات:</label>
+                                                <input type="file" name="proof_file" accept="image/*,video/*" style="font-size: 0.72rem; font-family: 'Cairo';">
+                                            </div>
+
+                                            <button type="submit" style="background: #D4AF37; color: #0B1B3D; border: none; padding: 6px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.78rem; font-family: 'Cairo';">
+                                                🔄 إرسال طلب الإرجاع/النزاع
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
                             @endif
                         </td>
 
@@ -85,12 +125,10 @@
                                 @if($isCancelled)
                                     <span style="color: #DC2626; font-size: 0.8rem; font-weight: bold;">أُلغي الطلب</span>
                                 @else
-                                    <!-- الفاتورة تظهر فقط للطلبات النشطة -->
                                     <a href="{{ route('customer.invoice', $order->id) }}" style="background: #F1F5F9; color: #1E6FB8; padding: 5px 10px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.8rem; border: 1px solid #CBD5E1;">
                                         الفاتورة
                                     </a>
 
-                                    <!-- زر الإلغاء (يظهر فقط إذا كانت الحالة pending) -->
                                     @if(trim($order->status) == 'pending')
                                         <form action="{{ route('customer.orders.cancel', $order->id) }}" method="POST" style="margin: 0;">
                                             @csrf
